@@ -1,16 +1,10 @@
-//
-//  ViewController.swift
-//  Rx_Uikit_study
-//
-//  Created by 杨东举 on 2025/4/21.
-//
-
 import UIKit
 
 class ViewController: UIViewController {
     
     private let counterButton = UIButton()
     private let loginButton = UIButton()
+    private let miniButton = UIButton()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -44,25 +38,39 @@ class ViewController: UIViewController {
         loginButton.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(loginButton)
         
+        // 设置Mini按钮
+        miniButton.setTitle("最小化示例", for: .normal)
+        miniButton.setTitleColor(.white, for: .normal)
+        miniButton.backgroundColor = .systemOrange
+        miniButton.layer.cornerRadius = 8
+        miniButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(miniButton)
+        
         // 设置约束
         NSLayoutConstraint.activate([
             titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 50),
             
             counterButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            counterButton.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -40),
+            counterButton.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -70),
             counterButton.widthAnchor.constraint(equalToConstant: 200),
             counterButton.heightAnchor.constraint(equalToConstant: 50),
             
             loginButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            loginButton.topAnchor.constraint(equalTo: counterButton.bottomAnchor, constant: 30),
+            loginButton.topAnchor.constraint(equalTo: counterButton.bottomAnchor, constant: 20),
             loginButton.widthAnchor.constraint(equalToConstant: 200),
-            loginButton.heightAnchor.constraint(equalToConstant: 50)
+            loginButton.heightAnchor.constraint(equalToConstant: 50),
+            
+            miniButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            miniButton.topAnchor.constraint(equalTo: loginButton.bottomAnchor, constant: 20),
+            miniButton.widthAnchor.constraint(equalToConstant: 200),
+            miniButton.heightAnchor.constraint(equalToConstant: 50)
         ])
         
         // 添加按钮事件
         counterButton.addTarget(self, action: #selector(showCounterViewController), for: .touchUpInside)
         loginButton.addTarget(self, action: #selector(showLoginViewController), for: .touchUpInside)
+        miniButton.addTarget(self, action: #selector(showMiniViewController), for: .touchUpInside)
     }
     
     @objc private func showCounterViewController() {
@@ -74,5 +82,9 @@ class ViewController: UIViewController {
         let loginVC = LoginViewController()
         present(loginVC, animated: true, completion: nil)
     }
+    
+    @objc private func showMiniViewController() {
+        let miniVC = Mini_ViewController()
+        present(miniVC, animated: true, completion: nil)
+    }
 }
-
