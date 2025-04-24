@@ -11,9 +11,9 @@ import RxSwift
 import RxCocoa
 
 // MARK: - 模型层
-struct CounterModel {
-    var count: Int
-}
+//struct CounterModel {
+//    var count: Int
+//}
 
 // MARK: - ViewModel层
 class CounterViewModel {
