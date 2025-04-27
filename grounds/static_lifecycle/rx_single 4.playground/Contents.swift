@@ -88,17 +88,22 @@ class Util {
             observer.onNext(0)
             
             // 递归函数来获取下一个进度值
-            NetworkAPI.fetchProgress(currentProgress: 0) { newProgress in
-                observer.onNext(newProgress)
-                
-                if newProgress < 100 {
-                    // 继续获取下一个进度值
-                   
-                } else {
-                    // 进度完成
-                    observer.onCompleted()
+            func fetchNextProgress(currentProgress: Int) {
+                NetworkAPI.fetchProgress(currentProgress: currentProgress) { newProgress in
+                    observer.onNext(newProgress)
+                    
+                    if newProgress < 100 {
+                        // 递归调用获取下一个进度值
+                        fetchNextProgress(currentProgress: newProgress)
+                    } else {
+                        // 进度完成
+                        observer.onCompleted()
+                    }
                 }
             }
+            
+            // 开始进度获取流程
+            fetchNextProgress(currentProgress: 0)
             
             
             return Disposables.create {
