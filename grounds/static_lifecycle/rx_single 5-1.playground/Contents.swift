@@ -24,19 +24,6 @@ class ExternalEventSource {
     }
 }
 
-//// 示例用法：假设在一个类中调用
-//class TestClass {
-//    func startMonitoring() {
-//        let source = ExternalEventSource()
-//        source.beginProgressMonitoring(for: self, callback: { progress in
-//            print("当前进度: \(progress)%")
-//        })
-//    }
-//}
-//
-//// 测试调用
-//let test = TestClass()
-//test.startMonitoring()
 // 工具类
 class Util {
     private let disposeBag = DisposeBag()
@@ -71,17 +58,6 @@ class Util {
         }
     }
     
-    // 启动进度监控（对外接口）
-    //    func startMonitoring(callback: @escaping (Int) -> Void) {
-    //        getProgressObservable()
-    //            .subscribe(onNext: { progress in
-    //                callback(progress)
-    //            }, onCompleted: {
-    //                print("进度监控完成")
-    //            })
-    //            .disposed(by: disposeBag)
-    //    }
-    
     func startMonitoring() -> Observable<Int> {
         return getProgressObservable()
     }
@@ -90,12 +66,9 @@ class Util {
 // 不正确的管理类（不保持引用）
 class Manager {
     static func starCall(progressCallback: @escaping (Int) -> Void) {
-        let util = Util() // 局部变量，方法结束后会被释放
+        let util = Util()
         
-        //        util.startMonitoring { progress in
-        //            print("进度: \(progress)%")
-        //        }
-        let dis = util.startMonitoring()
+        util.startMonitoring()
             .subscribe(onNext: { progress in
                 progressCallback(progress)
             }, onCompleted: {
