@@ -102,7 +102,7 @@ class Manager {
                 print("进度监控完成")
             })
         
-        print("Manager.startMonitoring 方法已执行完毕")
+    print("Manager.startMonitoring 方法已执行完毕")
     }
 }
 
