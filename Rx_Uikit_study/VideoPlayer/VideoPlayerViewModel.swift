@@ -20,6 +20,7 @@ class VideoPlayerViewModel {
         let longPressBegan: Observable<Void>
         let longPressEnded: Observable<Void>
         let seekByOffset: Observable<Double>
+        let speedAdjust: Observable<Float>
     }
     
     struct Output {
@@ -136,13 +137,23 @@ class VideoPlayerViewModel {
             })
             .disposed(by: disposeBag)
         
+        // Handle speed adjustment during long press
+        input.speedAdjust
+            .withLatestFrom(player) { speed, currentPlayer in
+                (speed, currentPlayer)
+            }
+            .subscribe(onNext: { speed, currentPlayer in
+                guard let currentPlayer = currentPlayer else { return }
+                currentPlayer.rate = speed
+            })
+            .disposed(by: disposeBag)
+        
         // Handle long press for speed control
         input.longPressBegan
             .withLatestFrom(player)
             .subscribe(onNext: { currentPlayer in
                 guard let currentPlayer = currentPlayer else { return }
-                // 长按时设置2倍速播放
-                currentPlayer.rate = 2.0
+                // 长按开始时不再直接设置倍速，而是等待speedAdjust信号
             })
             .disposed(by: disposeBag)
         

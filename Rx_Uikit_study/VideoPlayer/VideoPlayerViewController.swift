@@ -4,7 +4,7 @@ import RxCocoa
 import AVFoundation
 import MediaPlayer
 
-class VideoPlayerViewController: UIViewController {
+class VideoPlayerViewController: UIViewController, UIGestureRecognizerDelegate {
     
     // UI Components
     private let videoRenderView = VideoRenderView()
@@ -13,7 +13,7 @@ class VideoPlayerViewController: UIViewController {
     private lazy var volumeView: MPVolumeView = {
         let view = MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 100, height: 100))
         view.showsVolumeSlider = true  // 改为 true
-           view.alpha = 0.00001  // 让它透明但不影响功能
+        view.alpha = 0.00001  // 让它透明但不影响功能
         return view
     }()
     
@@ -36,6 +36,10 @@ class VideoPlayerViewController: UIViewController {
     private let seekByOffsetSubject = PublishSubject<Double>()
     private let adjustBrightnessSubject = PublishSubject<Float>()
     private let adjustVolumeSubject = PublishSubject<Float>()
+    private let speedAdjustSubject = PublishSubject<Float>()
+    private var currentSpeed: Float = 1.0
+    private var isLongPressing: Bool = false
+    private var initialSpeed: Float = 1.0
     
     // Gestures
     private var doubleTapGesture: UITapGestureRecognizer?
@@ -163,6 +167,9 @@ class VideoPlayerViewController: UIViewController {
         self.longPressGesture = longPressGesture
         self.panGesture = panGesture
         
+        longPressGesture.delegate = self
+        panGesture.delegate = self
+        
         // Require single tap to fail before recognizing double tap
         singleTapGesture.require(toFail: doubleTapGesture)
         
@@ -180,11 +187,17 @@ class VideoPlayerViewController: UIViewController {
             .subscribe(onNext: { [weak self] gesture in
                 switch gesture.state {
                 case .began:
+                    self?.isLongPressing = true
+                    self?.initialSpeed = 1.5 // 长按开始时的初始倍速
+                    self?.currentSpeed = self?.initialSpeed ?? 1.5
                     self?.longPressBeganSubject.onNext(())
-                    self?.speedIndicatorLabel.show()  // 使用show方法
+                    self?.speedAdjustSubject.onNext(self?.currentSpeed ?? 1.5)
+                    self?.speedIndicatorLabel.text = String(format: "%.1fx", self?.currentSpeed ?? 1.5)
+                    self?.speedIndicatorLabel.show()
                 case .ended, .cancelled:
+                    self?.isLongPressing = false
                     self?.longPressEndedSubject.onNext(())
-                    self?.speedIndicatorLabel.hide()  // 使用hide方法
+                    self?.speedIndicatorLabel.hide()
                 default:
                     break
                 }
@@ -207,7 +220,15 @@ class VideoPlayerViewController: UIViewController {
         case .began:
             panStartPoint = gesture.location(in: view)
             totalSeekOffset = 0
-            currentGestureType = .none  // 初始化为 none，稍后判断
+            
+            // 如果正在长按，则直接设置手势类型为倍速调整
+            if isLongPressing {
+                currentGestureType = .none // 或者添加一个新的 case .speed
+                // 记录当前倍速作为初始值
+                initialSpeed = currentSpeed
+            } else {
+                currentGestureType = .none
+            }
             
             // 记录初始值
             initialBrightness = UIScreen.main.brightness
@@ -215,78 +236,99 @@ class VideoPlayerViewController: UIViewController {
             initialVolume = audioSession.outputVolume
             
         case .changed:
-            // 如果还没有确定手势类型，现在判断
-            if currentGestureType == .none {
-                // 等到有足够的移动距离再判断方向
-                if abs(translation.x) > 10 || abs(translation.y) > 10 {
-                    let isLeftSide = location.x < view.bounds.width / 2
-                    
-                    if abs(translation.x) > abs(translation.y) {
-                        currentGestureType = .seek
-                    } else {
-                        if isLeftSide {
-                            currentGestureType = .brightness
+            // 如果正在长按，处理倍速调整
+            if isLongPressing {
+                // 基于水平移动调整倍速
+                let speedDelta = Float(translation.x) / 100.0 // 每100点调整1倍速
+                let newSpeed = initialSpeed + speedDelta
+                
+                // 限制倍速范围在0.5到3.0之间
+                currentSpeed = max(0.5, min(6.0, newSpeed))
+                
+                // 添加调试信息
+                print("Speed adjustment - translation.x: \(translation.x), speedDelta: \(speedDelta), currentSpeed: \(currentSpeed)")
+                
+                // 更新倍速显示
+                speedIndicatorLabel.text = String(format: "%.1fx", currentSpeed)
+                speedIndicatorLabel.show(duration: 0.1)
+                
+                // 发送倍速调整信号
+                speedAdjustSubject.onNext(currentSpeed)
+            } else {
+                // 原有的手势处理逻辑
+                if currentGestureType == .none {
+                    if abs(translation.x) > 10 || abs(translation.y) > 10 {
+                        let isLeftSide = location.x < view.bounds.width / 2
+                        
+                        if abs(translation.x) > abs(translation.y) {
+                            currentGestureType = .seek
                         } else {
-                            currentGestureType = .volume
+                            if isLeftSide {
+                                currentGestureType = .brightness
+                            } else {
+                                currentGestureType = .volume
+                            }
                         }
                     }
                 }
-            }
-            
-            // 根据手势类型处理
-            switch currentGestureType {
-            case .seek:
-                let offset = Double(translation.x) / 100.0 * 5.0
-                totalSeekOffset = offset
                 
-                let sign = offset >= 0 ? "+" : ""
-                progressIndicatorLabel.text = "\(sign)\(Int(offset))s"
-                progressIndicatorLabel.show(duration: 0.1)
-                
-            case .brightness:
-                let deltaY = translation.y / view.bounds.height
-                let newBrightness = max(0, min(1, initialBrightness - deltaY))
-                UIScreen.main.brightness = newBrightness
-                
-                let brightnessPercentage = Int(newBrightness * 100)
-                brightnessIndicatorLabel.text = "亮度: \(brightnessPercentage)%"
-                brightnessIndicatorLabel.show(duration: 0.1)
-                
-            case .volume:
-                let deltaY = translation.y / view.bounds.height
-                let newVolume = max(0, min(1, initialVolume - Float(deltaY)))
-                
-                // 使用现有的 volumeView 来调节系统音量
-                if let slider = volumeView.subviews.first(where: { $0 is UISlider }) as? UISlider {
-                    DispatchQueue.main.async {
-                        slider.value = newVolume
+                // 原有的手势类型处理
+                switch currentGestureType {
+                case .seek:
+                    let offset = Double(translation.x) / 100.0 * 5.0
+                    totalSeekOffset = offset
+                    
+                    let sign = offset >= 0 ? "+" : ""
+                    progressIndicatorLabel.text = "\(sign)\(Int(offset))s"
+                    progressIndicatorLabel.show(duration: 0.1)
+                    
+                case .brightness:
+                    let deltaY = translation.y / view.bounds.height
+                    let newBrightness = max(0, min(1, initialBrightness - deltaY))
+                    UIScreen.main.brightness = newBrightness
+                    
+                    let brightnessPercentage = Int(newBrightness * 100)
+                    brightnessIndicatorLabel.text = "亮度: \(brightnessPercentage)%"
+                    brightnessIndicatorLabel.show(duration: 0.1)
+                    
+                case .volume:
+                    let deltaY = translation.y / view.bounds.height
+                    let newVolume = max(0, min(1, initialVolume - Float(deltaY)))
+                    
+                    if let slider = volumeView.subviews.first(where: { $0 is UISlider }) as? UISlider {
+                        DispatchQueue.main.async {
+                            slider.value = newVolume
+                        }
                     }
+                    
+                    let volumePercentage = Int(newVolume * 100)
+                    volumeIndicatorLabel.text = "音量: \(volumePercentage)%"
+                    volumeIndicatorLabel.show(duration: 0.1)
+                    
+                case .none:
+                    break
                 }
-                
-                let volumePercentage = Int(newVolume * 100)
-                volumeIndicatorLabel.text = "音量: \(volumePercentage)%"
-                volumeIndicatorLabel.show(duration: 0.1)
-                
-            case .none:
-                break
             }
             
         case .ended, .cancelled:
-            switch currentGestureType {
-            case .seek:
-                if abs(totalSeekOffset) > 1.0 {
-                    seekByOffsetSubject.onNext(totalSeekOffset)
+            if !isLongPressing {
+                // 原有的手势结束处理
+                switch currentGestureType {
+                case .seek:
+                    if abs(totalSeekOffset) > 1.0 {
+                        seekByOffsetSubject.onNext(totalSeekOffset)
+                    }
+                    progressIndicatorLabel.hide(duration: 0.3)
+                    
+                case .brightness:
+                    brightnessIndicatorLabel.hide(duration: 0.3)
+                    
+                case .volume:
+                    volumeIndicatorLabel.hide(duration: 0.3)
+                    
+                case .none:
+                    break
                 }
-                progressIndicatorLabel.hide(duration: 0.3)
-                
-            case .brightness:
-                brightnessIndicatorLabel.hide(duration: 0.3)
-                
-            case .volume:
-                volumeIndicatorLabel.hide(duration: 0.3)
-                
-            case .none:
-                break
             }
             
             // 重置状态
@@ -309,12 +351,12 @@ class VideoPlayerViewController: UIViewController {
                 controlsView.playPauseTapped.asObservable(),
                 doubleTap
             ),
-//            seekTo: controlsView.sliderValueChanged.asObservable(),
             seekTo: controlsView.sliderSeekTo.asObservable(),
             viewWillDisappear: viewWillDisappearSubject.asObservable(),
             longPressBegan: longPressBeganSubject.asObservable(),
             longPressEnded: longPressEndedSubject.asObservable(),
-            seekByOffset: seekByOffsetSubject.asObservable()
+            seekByOffset: seekByOffsetSubject.asObservable(),
+            speedAdjust: speedAdjustSubject.asObservable()
         )
         
         let playerOutput = playerViewModel.transform(input: playerInput)
@@ -352,7 +394,6 @@ class VideoPlayerViewController: UIViewController {
         // Bind progress updates
         playerOutput.progress
             .drive(onNext: { [weak self] progress in
-                print(" playerOutput.progress",progress)
                 self?.controlsView.updateProgress(progress)
             })
             .disposed(by: disposeBag)
@@ -366,10 +407,10 @@ class VideoPlayerViewController: UIViewController {
             .disposed(by: disposeBag)
         
         playerOutput.seekCompleted
-                   .drive(onNext: { [weak self] _ in
-                       self?.controlsView.setSeekingCompleted()
-                   })
-                   .disposed(by: disposeBag)
+            .drive(onNext: { [weak self] _ in
+                self?.controlsView.setSeekingCompleted()
+            })
+            .disposed(by: disposeBag)
     }
     
     private func showError(_ message: String) {
@@ -382,5 +423,16 @@ class VideoPlayerViewController: UIViewController {
         super.viewDidLayoutSubviews()
         // 确保视图布局正确
         videoRenderView.setNeedsLayout()
+    }
+}
+extension VideoPlayerViewController {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // 允许长按和滑动手势同时识别
+        if (gestureRecognizer == longPressGesture && otherGestureRecognizer == panGesture) ||
+            (gestureRecognizer == panGesture && otherGestureRecognizer == longPressGesture) {
+            return true
+        }
+        return false
     }
 }
