@@ -20,6 +20,7 @@ class VideoPlayerViewModel {
         case seek(Float)
         case seekByOffset(Double)
         case adjustSpeed(Float)
+        case setSpeed(Float)
     }
     
     struct Input {
@@ -41,12 +42,15 @@ class VideoPlayerViewModel {
         let currentTime: String
         let duration: String
         let progress: Float
+        let speed: Float
     }
     
     // MARK: - Properties
     
     private let videoMetadata: VideoMetadata
     private let disposeBag = DisposeBag()
+    private let speedAdjustmentSubject = PublishSubject<Float>()
+       private let throttleInterval: RxTimeInterval = .milliseconds(100) // 100ms 节流
     
     // MARK: - Initialization
     
@@ -62,8 +66,22 @@ class VideoPlayerViewModel {
         let isLoadingRelay = BehaviorRelay<Bool>(value: false)
         let errorRelay = BehaviorRelay<String?>(value: nil)
         let seekCompletedRelay = PublishRelay<Void>()
+        let currentSpeedRelay = BehaviorRelay<Float>(value: 1.0)  // 添加这一行
         
         setupAudioSession()
+        
+        // 设置节流处理
+        speedAdjustmentSubject
+            .throttle(throttleInterval, scheduler: MainScheduler.instance)
+            .withLatestFrom(playerRelay) { speed, player in (speed, player) }
+            .subscribe(onNext: { speed, player in
+                guard let player = player else { return }
+                if player.rate != 0 { // 只在播放状态下调整速度
+                    player.rate = speed
+                }
+                currentSpeedRelay.accept(speed)
+            })
+            .disposed(by: disposeBag)
         
         // Handle view lifecycle
         input.viewDidLoad
@@ -93,7 +111,8 @@ class VideoPlayerViewModel {
                     action,
                     player: player,
                     isPlaying: isPlayingRelay,
-                    seekCompleted: seekCompletedRelay
+                    seekCompleted: seekCompletedRelay,
+                    currentSpeed: currentSpeedRelay
                 )
             })
             .disposed(by: disposeBag)
@@ -102,7 +121,8 @@ class VideoPlayerViewModel {
         let playerState = createPlayerStateObservable(
             player: playerRelay,
             isPlaying: isPlayingRelay,
-            isLoading: isLoadingRelay
+            isLoading: isLoadingRelay,
+            currentSpeed: currentSpeedRelay
         )
         
         // Handle playback end
@@ -163,7 +183,8 @@ class VideoPlayerViewModel {
         _ action: UserAction,
         player: AVPlayer?,
         isPlaying: BehaviorRelay<Bool>,
-        seekCompleted: PublishRelay<Void>
+        seekCompleted: PublishRelay<Void>,
+        currentSpeed: BehaviorRelay<Float>
     ) {
         guard let player = player else { return }
         
@@ -184,7 +205,23 @@ class VideoPlayerViewModel {
             seekByOffset(offset, player: player)
             
         case .adjustSpeed(let speed):
-            player.rate = speed
+            speedAdjustmentSubject.onNext(speed)
+//            player.rate = speed
+        case .setSpeed(let speed):
+            currentSpeed.accept(speed)
+            
+            // 检查当前是否在播放
+            let shouldResumePlaying = player.rate != 0 || isPlaying.value
+            
+            // 设置新的播放速度
+            if shouldResumePlaying {
+                player.playImmediately(atRate: speed)
+            } else {
+                player.rate = 0  // 确保暂停状态
+            }
+            
+            // 更新播放状态
+            isPlaying.accept(shouldResumePlaying)
         }
     }
     
@@ -216,7 +253,8 @@ class VideoPlayerViewModel {
     private func createPlayerStateObservable(
         player: BehaviorRelay<AVPlayer?>,
         isPlaying: BehaviorRelay<Bool>,
-        isLoading: BehaviorRelay<Bool>
+        isLoading: BehaviorRelay<Bool>,
+        currentSpeed: BehaviorRelay<Float>  // 添加这个参数
     ) -> Driver<PlayerState> {
         let timeObservable = player
             .compactMap { $0 }
@@ -233,9 +271,10 @@ class VideoPlayerViewModel {
             player,
             isPlaying,
             isLoading,
-            timeObservable
+            timeObservable,
+            currentSpeed  // 添加这一行
         )
-        .map { [weak self] player, isPlaying, isLoading, currentTime in
+        .map { [weak self] player, isPlaying, isLoading, currentTime, speed in
             let currentSeconds = CMTimeGetSeconds(currentTime)
             let durationSeconds = self?.videoMetadata.duration ?? 0
             let progress = durationSeconds > 0 ? Float(currentSeconds / durationSeconds) : 0
@@ -246,7 +285,8 @@ class VideoPlayerViewModel {
                 isLoading: isLoading,
                 currentTime: self?.formatTime(currentSeconds) ?? "00:00",
                 duration: self?.videoMetadata.durationFormatted ?? "00:00",
-                progress: progress
+                progress: progress,
+                speed: speed  // 添加这一行
             )
         }
         .asDriver(onErrorJustReturn: PlayerState(
@@ -255,7 +295,8 @@ class VideoPlayerViewModel {
             isLoading: false,
             currentTime: "00:00",
             duration: "00:00",
-            progress: 0
+            progress: 0,
+            speed: 1.0  // 添加这一行
         ))
     }
     

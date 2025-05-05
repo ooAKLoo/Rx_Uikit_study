@@ -39,4 +39,8 @@ protocol GestureHandlerDelegate: AnyObject {
     func didToggleControls()
     func didEndGestureAdjustment(_ gestureType: VideoGestureHandler.GestureType)  // 新增通用方法
     func didUpdateSeekOffset(_ offset: Double)  // 新增：实时更新seek偏移量
+    func didUpdateSpeedWithoutIndicator(_ speed: Float)
+    // 替换为一个统一的方法，同时处理UI隐藏和初始速度显示
+    func didStartSpeedAdjustment(initialSpeed: Float)
+    func didBeginGesture(_ gestureType: VideoGestureHandler.GestureType)
 }

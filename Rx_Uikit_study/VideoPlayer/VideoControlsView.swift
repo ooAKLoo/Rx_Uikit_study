@@ -1,8 +1,8 @@
 //
-//  VideoControlsView.swift
+//  VideoControlsView 2.swift
 //  Rx_Uikit_study
 //
-//  Created by 杨东举 on 2025/5/3.
+//  Created by 杨东举 on 2025/5/5.
 //
 
 import UIKit
@@ -13,12 +13,20 @@ class VideoControlsView: UIView {
     
     // UI Elements
     let playPauseButton = IconButton()
+    let speedButton = TextButton()
     let progressSlider = Slider()
     let currentTimeLabel = TextLabel()
     let durationLabel = TextLabel()
     let activityIndicator = ActivityIndicator()
     
-    // Container views for better layout management
+    // 倍速选择菜单
+    let speedMenuView = SelectMenuView<Float>(
+        options: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
+        titleFormatter: { "\($0)x" }
+    )
+    
+    // 控制面板容器 - 仅包含实际控制元素
+    private let controlsContainer = UIView()
     private let topContainer = UIView()
     private let bottomContainer = UIView()
     
@@ -27,16 +35,21 @@ class VideoControlsView: UIView {
     private let disposeBag = DisposeBag()
     
     // Input Subjects
-    private let isPlayingSubject = PublishSubject<Bool>()
-    private let currentTimeSubject = PublishSubject<String>()
-    private let durationSubject = PublishSubject<String>()
-    private let progressSubject = PublishSubject<Float>()
-    private let currentSpeedSubject = PublishSubject<Float>()
-    private let isSeekingSubject = PublishSubject<Bool>()
+    private let isPlayingSubject = BehaviorSubject<Bool>(value: false)
+    private let currentTimeSubject = BehaviorSubject<String>(value: "00:00")
+    private let durationSubject = BehaviorSubject<String>(value: "00:00")
+    private let progressSubject = BehaviorSubject<Float>(value: 0.0)
+    private let currentSpeedSubject = BehaviorSubject<Float>(value: 1.0)
+    private let isSeekingSubject = BehaviorSubject<Bool>(value: false)
+    private let speedSelectedSubject = PublishSubject<Float>()
     
     // Output Properties
     var playPauseTapped: ControlEvent<Void> {
         return playPauseButton.rx.tap
+    }
+    
+    var speedSelected: Observable<Float> {
+        return speedSelectedSubject.asObservable()
     }
     
     var sliderSeekTo: Observable<Float> {
@@ -66,7 +79,20 @@ class VideoControlsView: UIView {
     }
     
     private func setupUI() {
-        //         backgroundColor = Design.Colors.overlayBackground
+        // 设置透明背景
+        backgroundColor = .clear
+        
+        
+        // 设置控制面板容器
+        controlsContainer.backgroundColor = .clear
+        controlsContainer.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(controlsContainer)
+        
+        // Configure speed button
+        speedButton.setTitle("1.0x", for: .normal)
+        speedButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Configure speed menu
         
         // Configure UI elements
         currentTimeLabel.style = .small
@@ -80,32 +106,38 @@ class VideoControlsView: UIView {
         bottomContainer.translatesAutoresizingMaskIntoConstraints = false
         
         // Add subviews
-        addSubview(topContainer)
-        addSubview(bottomContainer)
+        controlsContainer.addSubview(topContainer)
+        controlsContainer.addSubview(bottomContainer)
         addSubview(activityIndicator)
+        addSubview(speedMenuView)
         
-        // Add elements to top container (progress controls)
+        // Add elements to containers
         topContainer.addSubview(currentTimeLabel)
         topContainer.addSubview(progressSlider)
         topContainer.addSubview(durationLabel)
         
-        // Add elements to bottom container (playback controls)
         bottomContainer.addSubview(playPauseButton)
+        bottomContainer.addSubview(speedButton)
     }
     
     private func setupConstraints() {
         NSLayoutConstraint.activate([
-            // Container constraints
-            topContainer.topAnchor.constraint(equalTo: topAnchor),
-            topContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
-            topContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
-            topContainer.heightAnchor.constraint(equalToConstant: 44),
+            // 控制面板容器位于底部
+            controlsContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
+            controlsContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
+            controlsContainer.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
+            controlsContainer.heightAnchor.constraint(equalToConstant: 88), // 44 + 44
             
-            bottomContainer.topAnchor.constraint(equalTo: topContainer.bottomAnchor),
-            bottomContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
-            bottomContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
-            bottomContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
+            // Container constraints 相对于 controlsContainer
+            bottomContainer.bottomAnchor.constraint(equalTo: controlsContainer.bottomAnchor),
+            bottomContainer.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor),
+            bottomContainer.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor),
             bottomContainer.heightAnchor.constraint(equalToConstant: 44),
+            
+            topContainer.bottomAnchor.constraint(equalTo: bottomContainer.topAnchor),
+            topContainer.leadingAnchor.constraint(equalTo: controlsContainer.leadingAnchor),
+            topContainer.trailingAnchor.constraint(equalTo: controlsContainer.trailingAnchor),
+            topContainer.heightAnchor.constraint(equalToConstant: 44),
             
             // Top container elements
             currentTimeLabel.leadingAnchor.constraint(equalTo: topContainer.leadingAnchor, constant: NowUI.Spacing.large),
@@ -120,26 +152,39 @@ class VideoControlsView: UIView {
             durationLabel.centerYAnchor.constraint(equalTo: topContainer.centerYAnchor),
             durationLabel.widthAnchor.constraint(equalToConstant: NowUI.Sizing.labelWidth),
             
-            // Bottom container elements - Play/Pause button centered
+            // Bottom container elements
             playPauseButton.centerXAnchor.constraint(equalTo: bottomContainer.centerXAnchor),
             playPauseButton.centerYAnchor.constraint(equalTo: bottomContainer.centerYAnchor),
             playPauseButton.widthAnchor.constraint(equalToConstant: NowUI.Sizing.buttonMedium),
             playPauseButton.heightAnchor.constraint(equalToConstant: NowUI.Sizing.buttonMedium),
             
-            // Activity indicator constraints
+            speedButton.trailingAnchor.constraint(equalTo: bottomContainer.trailingAnchor, constant: -NowUI.Spacing.large),
+            speedButton.centerYAnchor.constraint(equalTo: bottomContainer.centerYAnchor),
+            speedButton.heightAnchor.constraint(equalToConstant: NowUI.Sizing.buttonMedium),
+            
+            // Activity indicator 位于整个视图中心
             activityIndicator.centerXAnchor.constraint(equalTo: centerXAnchor),
-            activityIndicator.centerYAnchor.constraint(equalTo: centerYAnchor)
+            activityIndicator.centerYAnchor.constraint(equalTo: centerYAnchor),
+            
+//            // Speed menu constraints - 相对于整个视图定位
+//            speedMenuView.bottomAnchor.constraint(equalTo: speedButton.topAnchor, constant: -NowUI.Spacing.small),
+//            speedMenuView.trailingAnchor.constraint(equalTo: speedButton.trailingAnchor),
+            
+            speedMenuView.bottomAnchor.constraint(equalTo: speedButton.topAnchor, constant: -NowUI.Spacing.small),
+               speedMenuView.trailingAnchor.constraint(equalTo: speedButton.trailingAnchor),
+               speedMenuView.widthAnchor.constraint(equalToConstant: 100)
         ])
+        
     }
     
     private func setupBindings() {
-        
-        // VideoControlsView.swift
+        // 已有的绑定代码保持不变
         progressSlider.rx.controlEvent(.touchDown)
             .subscribe(onNext: { _ in
                 print("🔍 Touch down event triggered")
             })
             .disposed(by: disposeBag)
+            
         let input = VideoControlsViewModel.Input(
             isPlaying: isPlayingSubject.asObservable(),
             currentTime: currentTimeSubject.asObservable(),
@@ -149,7 +194,9 @@ class VideoControlsView: UIView {
             sliderValueChanged: progressSlider.rx.value.asObservable(),
             sliderTouchBegan: progressSlider.rx.controlEvent(.touchDown).asObservable(),
             sliderTouchEnded: progressSlider.rx.controlEvent([.touchUpInside, .touchUpOutside]).asObservable(),
-            isSeeking: isSeekingSubject.asObservable()
+            isSeeking: isSeekingSubject.asObservable(),
+            speedButtonTapped: speedButton.rx.tap.asObservable(),
+            currentSpeed: currentSpeedSubject.asObservable()
         )
         
         output = viewModel.transform(input: input)
@@ -175,6 +222,29 @@ class VideoControlsView: UIView {
             .drive(progressSlider.rx.value)
             .disposed(by: disposeBag)
         
+        // 添加倍速相关的绑定
+        output.speedButtonTitle
+            .drive(speedButton.rx.title(for: .normal))
+            .disposed(by: disposeBag)
+
+        // 替换为:
+        output.showSpeedMenu
+            .map { !$0 }  // 反转布尔值
+            .drive(onNext: { [weak self] isVisible in  // 更明确的参数名
+                if isVisible {
+                    self?.speedMenuView.showMenu()
+                } else {
+                    self?.speedMenuView.hideMenu()
+                }
+            })
+            .disposed(by: disposeBag)
+
+        // 绑定菜单选择事件
+        speedMenuView.optionSelected
+            .subscribe(onNext: { [weak self] speed in
+                self?.speedSelectedSubject.onNext(speed)
+            })
+            .disposed(by: disposeBag)
         
         progressSlider.rx.value
             .withLatestFrom(output.isSliderTracking) { value, isTracking in
@@ -188,17 +258,31 @@ class VideoControlsView: UIView {
                 guard let self = self else { return }
                 
                 // 将 durationString 转换为秒数
-                       let durationComponents = durationString.split(separator: ":").map { Double($0) ?? 0 }
-                       let durationSeconds = durationComponents[0] * 60 + durationComponents[1]
-                       
-                       // 计算预览时间
-                       let previewSeconds = Double(value) * durationSeconds
-                       let previewTime = self.formatTime(previewSeconds)
-                       
-                       // 更新时间标签为预览时间
-                       self.currentTimeLabel.text = previewTime
+                let durationComponents = durationString.split(separator: ":").map { Double($0) ?? 0 }
+                let durationSeconds = durationComponents[0] * 60 + durationComponents[1]
+                
+                // 计算预览时间
+                let previewSeconds = Double(value) * durationSeconds
+                let previewTime = self.formatTime(previewSeconds)
+                
+                // 更新时间标签为预览时间
+                self.currentTimeLabel.text = previewTime
             })
             .disposed(by: disposeBag)
+    }
+    
+    @objc private func handleBackgroundTap(_ gesture: UITapGestureRecognizer) {
+        let location = gesture.location(in: self)
+        
+        // 检查点击是否在speedMenuView或speedButton上
+        let locationInMenu = speedMenuView.convert(location, from: self)
+        let locationInButton = speedButton.convert(location, from: self)
+        
+        if !speedMenuView.bounds.contains(locationInMenu) &&
+           !speedButton.bounds.contains(locationInButton) &&
+           !speedMenuView.isHidden {
+            speedMenuView.isHidden = true
+        }
     }
     
     // 在 VideoControlsView 类中添加此方法
@@ -215,7 +299,6 @@ class VideoControlsView: UIView {
     }
     
     func updateTime(current: String, duration: String) {
-        print("current",current,"duration",duration)
         currentTimeSubject.onNext(current)
         durationSubject.onNext(duration)
     }
@@ -241,5 +324,10 @@ class VideoControlsView: UIView {
             activityIndicator.stopAnimating()
             playPauseButton.isHidden = false
         }
+    }
+    
+    // 在VideoControlsView.swift中添加
+    func setupTapToDismissForSpeedMenu(in viewController: UIViewController) {
+        viewController.setupTapToDismiss(for: speedMenuView, excluding: [speedButton])
     }
 }

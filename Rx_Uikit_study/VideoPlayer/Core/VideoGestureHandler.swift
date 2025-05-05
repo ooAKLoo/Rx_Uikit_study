@@ -29,6 +29,8 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
     private var currentSpeed: Float = 1.0
     private var isLongPressing: Bool = false
     
+    private var lastUsedSpeed: Float = PlayerConfiguration.Gesture.initialSpeedMultiplier // 默认值
+    
     func setupGestures(on view: UIView) -> [UIGestureRecognizer] {
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap))
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
@@ -49,24 +51,32 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
     
     @objc private func handleSingleTap(_ gesture: UITapGestureRecognizer) {
         delegate?.didToggleControls()
+        delegate?.didBeginGesture(currentGestureType)
     }
     
     @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
         delegate?.didTogglePlayPause()
+        delegate?.didBeginGesture(currentGestureType)
     }
     
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         switch gesture.state {
         case .began:
+            delegate?.didBeginGesture(currentGestureType)
             isLongPressing = true
-            initialSpeed = PlayerConfiguration.Gesture.initialSpeedMultiplier
+            initialSpeed = lastUsedSpeed
             currentSpeed = initialSpeed
-            delegate?.didUpdateSpeed(currentSpeed)
-            
+            // 使用统一的方法，一次性处理UI隐藏和速度显示
+            delegate?.didStartSpeedAdjustment(initialSpeed: currentSpeed)
+            //            delegate?.didUpdateSpeed(currentSpeed)
         case .ended, .cancelled:
             isLongPressing = false
-            delegate?.didUpdateSpeed(PlayerConfiguration.Speed.normal)
-            delegate?.didEndGestureAdjustment(.speed) // 添加这行
+            // 保存当前速度值以供下次使用
+            lastUsedSpeed = currentSpeed
+            // 先结束手势调整（隐藏指示器）
+            delegate?.didEndGestureAdjustment(.speed)
+            // 然后才恢复正常速度
+            delegate?.didUpdateSpeedWithoutIndicator(PlayerConfiguration.Speed.normal)
         default:
             break
         }
@@ -78,6 +88,7 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
         
         switch gesture.state {
         case .began:
+            delegate?.didBeginGesture(currentGestureType)
             panStartPoint = location
             totalSeekOffset = 0
             
@@ -99,12 +110,18 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
             }
             
         case .ended, .cancelled:
+            
+            if isLongPressing {
+                // 保存当前调整后的速度
+                lastUsedSpeed = currentSpeed
+            }
+            
             if !isLongPressing {
                 completeGesture()
                 
                 if currentGestureType != .none {
-                               delegate?.didEndGestureAdjustment(currentGestureType)
-                           }
+                    delegate?.didEndGestureAdjustment(currentGestureType)
+                }
             }
             resetGestureState()
             
@@ -114,6 +131,7 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
     }
     
     private func handleSpeedAdjustment(translation: CGPoint) {
+        delegate?.didBeginGesture(currentGestureType)
         let speedDelta = Float(translation.x) / PlayerConfiguration.Gesture.speedAdjustmentRate
         let newSpeed = initialSpeed + speedDelta
         currentSpeed = min(PlayerConfiguration.Speed.maximum, max(PlayerConfiguration.Speed.minimum, newSpeed))
@@ -121,6 +139,7 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
     }
     
     private func handleNormalPan(translation: CGPoint, location: CGPoint, in view: UIView) {
+        delegate?.didBeginGesture(currentGestureType)
         if currentGestureType == .none {
             determineGestureType(translation: translation, location: location, in: view)
         }
@@ -139,7 +158,7 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
     
     private func determineGestureType(translation: CGPoint, location: CGPoint, in view: UIView) {
         guard abs(translation.x) > PlayerConfiguration.Gesture.minimumPanThreshold ||
-              abs(translation.y) > PlayerConfiguration.Gesture.minimumPanThreshold else { return }
+                abs(translation.y) > PlayerConfiguration.Gesture.minimumPanThreshold else { return }
         
         if abs(translation.x) > abs(translation.y) {
             currentGestureType = .seek
@@ -148,11 +167,6 @@ class VideoGestureHandler: NSObject, UIGestureRecognizerDelegate {
             currentGestureType = isLeftSide ? .brightness : .volume
         }
     }
-    
-//    private func handleSeekGesture(translation: CGPoint) {
-//        let offset = Double(translation.x) / 100.0 * PlayerConfiguration.Gesture.seekOffsetMultiplier
-//        totalSeekOffset = offset
-//    }
     
     private func handleSeekGesture(translation: CGPoint) {
         let offset = Double(translation.x) / 100.0 * PlayerConfiguration.Gesture.seekOffsetMultiplier

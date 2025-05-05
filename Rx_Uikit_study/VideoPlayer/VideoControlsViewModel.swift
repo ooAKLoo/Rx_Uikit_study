@@ -21,6 +21,8 @@ class VideoControlsViewModel {
         let sliderTouchBegan: Observable<Void>
         let sliderTouchEnded: Observable<Void>
         let isSeeking: Observable<Bool>
+        let speedButtonTapped: Observable<Void>  // 添加
+                let currentSpeed: Observable<Float>      // 添加
     }
     
     struct Output {
@@ -29,14 +31,20 @@ class VideoControlsViewModel {
         let durationText: Driver<String>
         let progressValue: Driver<Float>
         let isSliderTracking: Driver<Bool>
+        let speedButtonTitle: Driver<String>     // 添加
+        let showSpeedMenu: Driver<Bool>          // 添加
     }
+    
+    private let playImage = UIImage(systemName: "play.fill")
+    private let pauseImage = UIImage(systemName: "pause.fill")
     
     func transform(input: Input) -> Output {
         let playPauseButtonImage = input.isPlaying
-            .map { isPlaying -> UIImage? in
-                let imageName = isPlaying ? "pause.fill" : "play.fill"
-                return UIImage(systemName: imageName)
-            }
+            .distinctUntilChanged()
+            .map { [weak self] isPlaying -> UIImage? in
+                   guard let self = self else { return nil }
+                   return isPlaying ? self.pauseImage : self.playImage
+               }
             .asDriver(onErrorJustReturn: nil)
         
         let isSliderTracking = Observable.merge(
@@ -45,6 +53,7 @@ class VideoControlsViewModel {
             input.sliderTouchEnded
                 .map { false }
         )
+        .startWith(false)
         .asDriver(onErrorJustReturn: false)
         
         let isUpdatingDisabled = Observable.combineLatest(
@@ -73,12 +82,22 @@ class VideoControlsViewModel {
                 .map { (time, disabled) in time }
                 .asDriver(onErrorJustReturn: "00:00")
         
+        let speedButtonTitle = input.currentSpeed
+                    .map { speed in "\(speed)x" }
+                    .asDriver(onErrorJustReturn: "1.0x")
+                
+                let showSpeedMenu = input.speedButtonTapped
+                    .scan(true) { current, _ in !current }
+                    .asDriver(onErrorJustReturn: true)
+        
         return Output(
             playPauseButtonImage: playPauseButtonImage,
             currentTimeText: currentTimeText,
             durationText: input.duration.asDriver(onErrorJustReturn: "00:00"),
             progressValue: progressValue,
-            isSliderTracking: isSliderTracking
+            isSliderTracking: isSliderTracking,
+            speedButtonTitle: speedButtonTitle,
+            showSpeedMenu: showSpeedMenu
         )
     }
 }

@@ -110,10 +110,12 @@ extension VideoPlayerViewController {
             videoRenderView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             videoRenderView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
+            // controlsView 现在覆盖整个视图
+            controlsView.topAnchor.constraint(equalTo: view.topAnchor),
             controlsView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             controlsView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            controlsView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            controlsView.heightAnchor.constraint(equalToConstant: PlayerConfiguration.UI.controlsHeight),
+            controlsView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
             
             speedIndicatorLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             speedIndicatorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -141,7 +143,8 @@ extension VideoPlayerViewController {
             userAction: Observable.merge(
                 userActionSubject.asObservable(),
                 controlsView.playPauseTapped.map { .playPause },
-                controlsView.sliderSeekTo.map { .seek($0) }
+                controlsView.sliderSeekTo.map { .seek($0) },
+                controlsView.speedSelected.map { .setSpeed($0) }  // 添加这一行
             )
         )
         
@@ -173,6 +176,7 @@ extension VideoPlayerViewController {
         controlsView.setLoading(state.isLoading)
         controlsView.updateTime(current: state.currentTime, duration: state.duration)
         controlsView.updateProgress(state.progress)
+        controlsView.updateSpeed(state.speed)
     }
     
     private func showError(_ message: String) {
@@ -219,10 +223,29 @@ extension VideoPlayerViewController: GestureHandlerDelegate {
         userActionSubject.onNext(.playPause)
     }
     
+//    func didToggleControls() {
+//        UIView.animate(withDuration: PlayerConfiguration.UI.controlsAnimationDuration) {
+//            self.controlsView.alpha = self.controlsView.alpha == 0 ? 1 : 0
+//        }
+//        
+//        // 假设这在一个ViewController中
+////        setupTapToDismiss(for: speedMenuView as! SelectMenuView<Any>, excluding: [speedButton])
+//    }
+    
     func didToggleControls() {
         UIView.animate(withDuration: PlayerConfiguration.UI.controlsAnimationDuration) {
             self.controlsView.alpha = self.controlsView.alpha == 0 ? 1 : 0
+        } completion: { finished in
+            // 如果控制面板被隐藏，确保速度菜单也隐藏
+            if self.controlsView.alpha == 0 {
+                self.controlsView.speedMenuView.hideMenu()
+            }
         }
+    }
+    
+    func didUpdateSpeedWithoutIndicator(_ speed: Float) {
+        userActionSubject.onNext(.adjustSpeed(speed))
+        // 不显示指示器
     }
     
     func didEndGestureAdjustment(_ gestureType: VideoGestureHandler.GestureType) {
@@ -238,5 +261,22 @@ extension VideoPlayerViewController: GestureHandlerDelegate {
         case .none:
             break
         }
+    }
+    
+    func didStartSpeedAdjustment(initialSpeed: Float) {
+        // 1. 先隐藏控制视图
+        UIView.animate(withDuration: PlayerConfiguration.UI.indicatorShowDuration) {
+            self.controlsView.alpha = 0
+        } completion: { _ in
+            // 2. 控制视图完全隐藏后，再显示速度指示器
+            self.userActionSubject.onNext(.adjustSpeed(initialSpeed))
+            self.indicatorManager.showSpeedIndicator(speed: initialSpeed)
+            self.controlsView.speedMenuView.hideMenu()
+        }
+    }
+    
+    func didBeginGesture(_ gestureType: VideoGestureHandler.GestureType) {
+        // 确保速度菜单隐藏
+        controlsView.speedMenuView.hideMenu()
     }
 }
