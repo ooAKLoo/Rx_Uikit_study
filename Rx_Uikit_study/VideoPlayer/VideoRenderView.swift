@@ -22,6 +22,8 @@ class VideoRenderView: UIView {
     
     // 保持对playerLayer的强引用
     private var playerLayer: AVPlayerLayer?
+    // 添加当前player的引用
+    private weak var currentPlayer: AVPlayer?
     
     // Output
     var videoSize: Driver<CGSize> {
@@ -53,22 +55,29 @@ class VideoRenderView: UIView {
             .drive(onNext: { [weak self] layer in
                 guard let self = self else { return }
                 
-                // 移除旧的layer
-                self.playerLayer?.removeFromSuperlayer()
-                
-                // 添加新的layer
-                if let layer = layer {
-                    layer.frame = self.bounds
-                    layer.videoGravity = .resizeAspect
-                    self.layer.addSublayer(layer)
-                    self.playerLayer = layer
+                // 只有当layer真正改变时才更新
+                if self.playerLayer !== layer {
+                    // 移除旧的layer
+                    self.playerLayer?.removeFromSuperlayer()
+                    
+                    // 添加新的layer
+                    if let layer = layer {
+                        layer.frame = self.bounds
+                        layer.videoGravity = .resizeAspect
+                        self.layer.addSublayer(layer)
+                        self.playerLayer = layer
+                    }
                 }
             })
             .disposed(by: disposeBag)
     }
     
     func setPlayer(_ player: AVPlayer?) {
-        setPlayerSubject.onNext(player)
+        // 只有当player真正改变时才更新
+        if currentPlayer !== player {
+            currentPlayer = player
+            setPlayerSubject.onNext(player)
+        }
     }
     
     override func layoutSubviews() {
