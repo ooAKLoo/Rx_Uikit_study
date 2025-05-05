@@ -64,9 +64,18 @@ class VideoControlsViewModel {
                   .map { (progress, disabled) in progress }
                   .asDriver(onErrorJustReturn: 0)
         
+        // 当前时间文本：拖动时不更新
+            let currentTimeText = input.currentTime
+                .withLatestFrom(isUpdatingDisabled) { time, disabled in
+                    return (time, disabled)
+                }
+                .filter { (time, disabled) in !disabled }
+                .map { (time, disabled) in time }
+                .asDriver(onErrorJustReturn: "00:00")
+        
         return Output(
             playPauseButtonImage: playPauseButtonImage,
-            currentTimeText: input.currentTime.asDriver(onErrorJustReturn: "00:00"),
+            currentTimeText: currentTimeText,
             durationText: input.duration.asDriver(onErrorJustReturn: "00:00"),
             progressValue: progressValue,
             isSliderTracking: isSliderTracking

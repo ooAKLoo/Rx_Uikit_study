@@ -178,7 +178,6 @@ class VideoControlsView: UIView {
         
         progressSlider.rx.value
             .withLatestFrom(output.isSliderTracking) { value, isTracking in
-                print("value",value,"isTracking",isTracking)
                 return (value, isTracking)
             }
             .filter { (value, isTracking) in isTracking }
@@ -189,18 +188,25 @@ class VideoControlsView: UIView {
                 guard let self = self else { return }
                 
                 // 将 durationString 转换为秒数
-                let durationComponents = durationString.split(separator: ":").map { Double($0) ?? 0 }
-                let durationSeconds = durationComponents[0] * 60 + durationComponents[1]
-                
-                print("durationSeconds",durationSeconds)
-                //                   // 计算预览时间
-                //                   let previewSeconds = Double(value) * durationSeconds
-                //                   let previewTime = self.formatTime(previewSeconds)
-                //
-                //                   // 更新时间标签为预览时间
-                //                   self.currentTimeLabel.text = previewTime
+                       let durationComponents = durationString.split(separator: ":").map { Double($0) ?? 0 }
+                       let durationSeconds = durationComponents[0] * 60 + durationComponents[1]
+                       
+                       // 计算预览时间
+                       let previewSeconds = Double(value) * durationSeconds
+                       let previewTime = self.formatTime(previewSeconds)
+                       
+                       // 更新时间标签为预览时间
+                       self.currentTimeLabel.text = previewTime
             })
             .disposed(by: disposeBag)
+    }
+    
+    // 在 VideoControlsView 类中添加此方法
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite else { return "00:00" }
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%02d:%02d", mins, secs)
     }
     
     // Public methods to update view
@@ -209,6 +215,7 @@ class VideoControlsView: UIView {
     }
     
     func updateTime(current: String, duration: String) {
+        print("current",current,"duration",duration)
         currentTimeSubject.onNext(current)
         durationSubject.onNext(duration)
     }
