@@ -17,6 +17,7 @@
 		CA470BD2621C9F9E03FCC918 /* Pods-Rx_Uikit_study.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Rx_Uikit_study.debug.xcconfig"; path = "Target Support Files/Pods-Rx_Uikit_study/Pods-Rx_Uikit_study.debug.xcconfig"; sourceTree = "<group>"; };
 		FBCFCE532DBA8BE3007E1057 /* Rx_Uikit_study.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rx_Uikit_study.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FBCFCE6B2DBA8C11007E1057 /* Podfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = Podfile; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		FBEC764C2DD78810001B3566 /* image_demo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = image_demo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -43,6 +44,11 @@
 			path = Rx_Uikit_study;
 			sourceTree = "<group>";
 		};
+		FBEC764D2DD78810001B3566 /* image_demo */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = image_demo;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +57,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				50EAB7196E8723E008EF5F98 /* Pods_Rx_Uikit_study.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FBEC76492DD78810001B3566 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,6 +93,7 @@
 				FB1693FD2DBCBD5200921C79 /* grounds */,
 				FBCFCE6B2DBA8C11007E1057 /* Podfile */,
 				FBCFCE552DBA8BE3007E1057 /* Rx_Uikit_study */,
+				FBEC764D2DD78810001B3566 /* image_demo */,
 				FBCFCE542DBA8BE3007E1057 /* Products */,
 				927BAD6DF5604896A18F8CC7 /* Pods */,
 				0AC639F53D3352E02E30E9F0 /* Frameworks */,
@@ -90,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				FBCFCE532DBA8BE3007E1057 /* Rx_Uikit_study.app */,
+				FBEC764C2DD78810001B3566 /* image_demo.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -120,6 +135,28 @@
 			productReference = FBCFCE532DBA8BE3007E1057 /* Rx_Uikit_study.app */;
 			productType = "com.apple.product-type.application";
 		};
+		FBEC764B2DD78810001B3566 /* image_demo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FBEC76562DD78811001B3566 /* Build configuration list for PBXNativeTarget "image_demo" */;
+			buildPhases = (
+				FBEC76482DD78810001B3566 /* Sources */,
+				FBEC76492DD78810001B3566 /* Frameworks */,
+				FBEC764A2DD78810001B3566 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FBEC764D2DD78810001B3566 /* image_demo */,
+			);
+			name = image_demo;
+			packageProductDependencies = (
+			);
+			productName = image_demo;
+			productReference = FBEC764C2DD78810001B3566 /* image_demo.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -131,6 +168,9 @@
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					FBCFCE522DBA8BE3007E1057 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					FBEC764B2DD78810001B3566 = {
 						CreatedOnToolsVersion = 16.3;
 					};
 				};
@@ -150,6 +190,7 @@
 			projectRoot = "";
 			targets = (
 				FBCFCE522DBA8BE3007E1057 /* Rx_Uikit_study */,
+				FBEC764B2DD78810001B3566 /* image_demo */,
 			);
 		};
 /* End PBXProject section */
@@ -160,6 +201,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				FBCFCE6C2DBA8C11007E1057 /* Podfile in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FBEC764A2DD78810001B3566 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -213,6 +261,13 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		FBCFCE4F2DBA8BE3007E1057 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FBEC76482DD78810001B3566 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -401,6 +456,64 @@
 			};
 			name = Release;
 		};
+		FBEC76542DD78811001B3566 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9YFT3H8S93;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yangdongju.image-demo";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FBEC76552DD78811001B3566 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9YFT3H8S93;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yangdongju.image-demo";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -418,6 +531,15 @@
 			buildConfigurations = (
 				FBCFCE672DBA8BE3007E1057 /* Debug */,
 				FBCFCE682DBA8BE3007E1057 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FBEC76562DD78811001B3566 /* Build configuration list for PBXNativeTarget "image_demo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FBEC76542DD78811001B3566 /* Debug */,
+				FBEC76552DD78811001B3566 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

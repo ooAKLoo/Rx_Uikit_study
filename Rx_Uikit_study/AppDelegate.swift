@@ -32,7 +32,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //        window?.rootViewController = Mini_ViewController() // 使用ViewController作为根视图控制器
 //        window?.rootViewController = VideoPlayerViewController()
         // 在需要使用播放器的地方
-        let videoURL = URL(string: "http://192.168.1.7:8080/api/videos/stream/10_1080P.mp4")!
+        let videoURL = URL(string: "http://192.168.1.8:8080/api/videos/stream/10_1080P.mp4")!
         let videoMetadata = VideoMetadata(
             title: "示例视频",
             duration: 2739.0,  // 45分39秒
